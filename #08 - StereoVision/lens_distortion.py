@@ -24,23 +24,16 @@ print(f"{F=:}")
 
 
 imgl1 = cv2.imread("../images/left01.jpg")
-imgl2 = cv2.imread("../images/left01.jpg")
-
 
 imgr1 = cv2.imread("../images/right01.jpg")
-imgr2 = cv2.imread("../images/right01.jpg")
 
+un_imgl1 = cv2.undistort(imgl1, mtx1,dist1)
+cv2.imshow("Imgl1 OG", imgl1)
+cv2.imshow("Imgl1 und", un_imgl1)
 
-imgl1 = cv2.undistort(imgl1, mtx1,dist1)
-cv2.imshow(imgl1, "Imgl1")
-
-imgl2 = cv2.undistort(imgl2, mtx1,dist1)
-cv2.imshow(imgl2, "Imgl2")
-
-imgr1 = cv2.undistort(imgr1, mtx2,dist2)
-cv2.imshow(imgr1, "Imgr1")
-
-imgr2 = cv2.undistort(imgr2, mtx2,dist2)
-cv2.imshow(imgr2, "Imgr2")
+un_imgr1 = cv2.undistort(imgr1, mtx2,dist2)
+cv2.imshow("Imgr1 OG", imgr1)
+cv2.imshow("Imgr1 Und", un_imgr1)
 
 cv2.waitKey()
+cv2.destroyAllWindows()
