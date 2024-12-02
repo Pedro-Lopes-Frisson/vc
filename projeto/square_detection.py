@@ -101,6 +101,13 @@ def detect_contout_main_color(contours, frame_hsv):
     orange_upper=np.array([17,255,255])
     white_lower=np.array([16,0,216])
     white_upper=np.array([70,39,255])
+    
+    blue_lower = np.array([94, 80, 2], np.uint8) 
+    blue_upper = np.array([120, 255, 255], np.uint8) 
+    green_lower = np.array([25, 52, 72], np.uint8) 
+    green_upper = np.array([102, 255, 255], np.uint8) 
+    red_lower = np.array([136, 87, 111], np.uint8) 
+    red_upper = np.array([180, 255, 255], np.uint8)
 
     for c in contours:
         contour_middle_x, contour_middle_y = math.floor(c[3][0][0] + ((c[0][0][0] - c[3][0][0] )/ 2)),math.floor(c[0][0][1] + ((c[1][0][1] - c[0][0][1] )/ 2))
@@ -121,15 +128,18 @@ def detect_contout_main_color(contours, frame_hsv):
             cv2.drawContours(frame_hsv,c, -1, (255,255,0))
             cv2.circle(frame_hsv, (contour_middle_x, contour_middle_y), 10, (100,10,100), 5)
             cv2.putText(frame_hsv, "green",(contour_middle_x, contour_middle_y), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255))
+            cv2.putText(frame_hsv, f"green {color}{green_lower}{green_upper}",(contour_middle_x, contour_middle_y), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255), thickness=5)
             cv2.imshow("video", frame_hsv)
+            cv2.waitKey()
             
 
         elif all( color > red_lower) and all( color < red_upper):
             print( f" {c[3][0][0]} + {((c[0][0][0] - c[3][0][0] )/ 2) },{c[0][0][1]} + {((c[1][0][1] - c[0][0][1] )/ 2)}")
             cv2.drawContours(frame_hsv,c, -1, (255,255,0))
             cv2.circle(frame_hsv, (contour_middle_x, contour_middle_y), 10, (100,10,100), 5)
-            cv2.putText(frame_hsv, "red",(contour_middle_x, contour_middle_y), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255))
+            cv2.putText(frame_hsv, f"red {color=:}{red_lower=:}{red_upper=:}",(contour_middle_x-100, contour_middle_y), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255))
             cv2.imshow("video", frame_hsv)
+            cv2.waitKey()
 
         elif all( color > yellow_lower) and all( color < yellow_upper):
             cv2.drawContours(frame_hsv,c, -1, (255,255,0))
@@ -213,7 +223,7 @@ if __name__ == "__main__":
         countours = reduce_contour_complexity(dilated_canny, frame)
         countours = countours[::-1] # this now should follow the order in the image like top right to left ....
 
-        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         detect_contout_main_color(countours, frame_hsv)
 
             
