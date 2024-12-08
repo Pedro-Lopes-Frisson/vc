@@ -38,7 +38,7 @@ def mouse_handler_right(event, x, y, flags, params):
     global right_img_points
     if event == cv2.EVENT_LBUTTONDOWN:
         p = np.asarray([x, y])
-        epilineR = cv2.computeCorrespondEpilines(p.reshape(-1, 1, 2), 0, F)
+        epilineR = cv2.computeCorrespondEpilines(p.reshape(-1, 1, 2), 2, F)
         epilineR = epilineR.reshape(-1, 3)[0]
         right_img_points.append(epilineR)
 
@@ -46,10 +46,10 @@ def mouse_handler_right(event, x, y, flags, params):
 imgl1 = cv2.imread("../images/left01.jpg")
 imgr1 = cv2.imread("../images/right01.jpg")
 
-imgl1 = cv2.undistort(imgl1, mtx1, dist1)
+imgl1 = cv2.undistort(imgl1, mtx2, dist2)
 cv2.imshow("Imgl1", imgl1)
 
-imgr1 = cv2.undistort(imgr1, mtx2, dist2)
+imgr1 = cv2.undistort(imgr1, mtx1, dist1)
 cv2.imshow("Imgr1", imgr1)
 
 left_img_points = []
