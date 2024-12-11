@@ -3,17 +3,18 @@ import numpy as np
 import math
 import sys
 
-
 def apply_canny_detection(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(image,   (3,3), 0)
+    blurred = cv2.bilateralFilter(gray, 9, 45,75)
+    cv2.imshow("Blurred", blurred)
     dst = cv2.Canny(blurred, 20,30 , None)
     return dst
 
 def dilate_contours(image):
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
     dilated = cv2.dilate(image, kernel, iterations=2)
-    return dilated
+    eroded = cv2.erode(dilated, kernel, iterations=1)
+    return eroded
 
 def get_hough_lines(image):
     linesP = cv2.HoughLinesP(image, 1, np.pi / 180, 50, None, 80, 8)
@@ -27,12 +28,12 @@ def calculate_distance (p1,p2):
 
 def detect_closest_nine_squares(contours,reference_square, gray_frame):
     # square contour order top right  ->  bottom right -> bottom left -> top left
-    x_r,y_r,height,width = cv2.boundingRect(reference_square[0])
+    x_r,y_r,width,height = cv2.boundingRect(reference_square[0])
     reference_pos = (x_r + (width // 2), y_r + (height // 2))
 
     contour_distance = []
     for c in contours:
-        x,y,h,w = cv2.boundingRect(c)
+        x,y,w,h = cv2.boundingRect(c)
         c_center = (x + (w // 2), y + (h // 2))
         contour_distance.append((c,calculate_distance(c_center, reference_pos) ))
 
@@ -115,7 +116,7 @@ def detect_contout_main_color(contours, frame_hsv):
     for c in contours:
         contour_middle_x, contour_middle_y = math.floor(c[3][0][0] + ((c[0][0][0] - c[3][0][0] )/ 2)),math.floor(c[0][0][1] + ((c[1][0][1] - c[0][0][1] )/ 2))
         color = np.zeros_like( frame_hsv[0,0])
-        print(color)
+        #print(color)
 
         contour_middle_x = min(max(contour_middle_x, 0), frame_hsv.shape[0] - 1)
         contour_middle_y = min(max(contour_middle_y, 0), frame_hsv.shape[1] - 1)
@@ -123,7 +124,7 @@ def detect_contout_main_color(contours, frame_hsv):
             x,y = point[0]
             x = min(max(x, 0), frame_hsv.shape[0] - 1)
             y = min(max(y, 0), frame_hsv.shape[1] - 1)
-            print(x,y,frame_hsv.shape[1], frame_hsv.shape[0])
+            #print(x,y,frame_hsv.shape[1], frame_hsv.shape[0])
             color += frame_hsv[x,y]
 
         color += frame_hsv[contour_middle_x,contour_middle_y]
@@ -136,7 +137,7 @@ def detect_contout_main_color(contours, frame_hsv):
             
 
         elif all( color > red_lower) and all( color < red_upper):
-            print( f" {c[3][0][0]} + {((c[0][0][0] - c[3][0][0] )/ 2) },{c[0][0][1]} + {((c[1][0][1] - c[0][0][1] )/ 2)}")
+            #print( f" {c[3][0][0]} + {((c[0][0][0] - c[3][0][0] )/ 2) },{c[0][0][1]} + {((c[1][0][1] - c[0][0][1] )/ 2)}")
             cv2.drawContours(frame_hsv,c, -1, (255,255,0))
             cv2.circle(frame_hsv, (contour_middle_x, contour_middle_y), 10, (100,10,100), 5)
             cv2.putText(frame_hsv, f"red {color=:}{red_lower=:}{red_upper=:}",(contour_middle_x-100, contour_middle_y), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255))
@@ -149,7 +150,7 @@ def detect_contout_main_color(contours, frame_hsv):
             cv2.imshow("video", frame_hsv)
 
         elif all( color > blue_lower) and all( color < blue_upper):
-            print( f" {c[3][0][0]} + {((c[0][0][0] - c[3][0][0] )/ 2) },{c[0][0][1]} + {((c[1][0][1] - c[0][0][1] )/ 2)}")
+            #print( f" {c[3][0][0]} + {((c[0][0][0] - c[3][0][0] )/ 2) },{c[0][0][1]} + {((c[1][0][1] - c[0][0][1] )/ 2)}")
             cv2.drawContours(frame_hsv,c, -1, (255,255,0))
             cv2.circle(frame_hsv, (contour_middle_x, contour_middle_y), 10, (100,10,100), 5)
             cv2.putText(frame_hsv, "blue",(contour_middle_x, contour_middle_y), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255))
@@ -207,14 +208,14 @@ angle = np.arccos(cosine_angle)
     angle_3 =np.degrees(np.arccos(np.dot(br-bl,bl-tl) / (np.linalg.norm(br-bl)* np.linalg.norm(bl-tl))))
     angle_4 =np.degrees(np.arccos(np.dot(bl-tl,tl-tr) / (np.linalg.norm(bl-tl)* np.linalg.norm(tl-tr))))
     
-    print("ARE LINES SIMILAR ", angle_1, "\n\n\n\n")
+    #print("ARE LINES SIMILAR ", angle_1, "\n\n\n\n")
     are_angles_90_degrees = \
             is_approximate(angle_1, 90) and \
             is_approximate(angle_2, 90) and \
             is_approximate(angle_3, 90) and \
             is_approximate(angle_4, 90)
 
-    print("ARE LINES SIMILAR ", are_angles_90_degrees, "\n\n\n\n")
+    #print("ARE LINES SIMILAR ", are_angles_90_degrees, "\n\n\n\n")
     return are_angles_90_degrees and are_lines_similar and has_four_corners
 
 
@@ -223,14 +224,14 @@ def detect_middle_square(contours):
 
     contour_distance = []
     for idx,c in enumerate(contours):
-        x,y,h,w = cv2.boundingRect(c)
+        x,y,w,h = cv2.boundingRect(c)
         c_center = (x + (w // 2), y + (w // 2))
         max_distance = 0
         for idx1,c1 in enumerate(contours):
             if idx == idx1:
                 continue
 
-            x1,y1,h1,w1 = cv2.boundingRect(c1)
+            x1,y1,w1,h1 = cv2.boundingRect(c1)
             c_center1 = (x1 + (w1 // 2), y1 + (w1 // 2))
             distance = calculate_distance(c_center, c_center1)
             if max_distance <  distance:
@@ -239,16 +240,33 @@ def detect_middle_square(contours):
         contour_distance.append((c, max_distance ))
 
     sorted_contours = sorted(contour_distance, key=lambda x: x[1])
-    print([ c[0] for c in sorted_contours[:1]])
+    #print([ c[0] for c in sorted_contours[:1]])
     return  [ c[0] for c in sorted_contours[:1]]
 
 def detect_face_color(middle_square, hsv_frame):
 
-    x_r,y_r,height,width = cv2.boundingRect(middle_square[0])
+    x_r,y_r,width, height = cv2.boundingRect(middle_square[0])
+    
     reference_pos_x, reference_pos_y = (x_r + (width // 2), y_r + (height // 2))
-    hsv_px = hsv_frame[reference_pos_x,reference_pos_y]
-    if 0< hsv_px[0] < 10 or 170 < hsv_px[0] <= 179:
+    hsv_px = hsv_frame[reference_pos_y,reference_pos_x]
+    if 0<= hsv_px[1] <  25 :
+        return "White"
+
+    if 0< hsv_px[0] < 7 or 170 < hsv_px[0] <= 179:
         return "RED"
+
+    if 7 < hsv_px[0] < 25:
+        return "Orange"
+
+    if 25< hsv_px[0] < 45:
+        return "Yellow"
+
+    if 45 < hsv_px[0] < 85:
+        return "Green"
+
+    if 85< hsv_px[0] < 115:
+        return "Blue"
+
 
 
 if __name__ == "__main__":
@@ -261,30 +279,14 @@ if __name__ == "__main__":
 
     cv2.namedWindow("video", cv2.WINDOW_FREERATIO)
 
-    green_lower=[54,63,79]
-    green_upper=[68,222,157]
-
-    yellow_lower=[22,106,178]
-    yellow_upper=[39,222,245]
-
-    red_lower=[0,101,25]
-    red_upper=[5,255,207]
-    red_2_lower=[160,101,25]
-    red_2_upper=[179,255,207]
-
-    blue_lower=[88,146,0]
-    blue_upper=[110,239,186]
-    orange_lower=[6,162,175]
-    orange_upper=[17,255,255]
-    white_lower=[16,0,216]
-    white_upper=[70,39,255]
-
-
-
-    capture = cv2.VideoCapture("./20241128_111931.mp4")
+    #capture = cv2.VideoCapture("./20241128_111931.mp4")
     #capture = cv2.VideoCapture("./20241123_182441.mp4")
     #capture = cv2.VideoCapture(0)
     #capture = cv2.VideoCapture("http://192.168.241.75:4747/video")
+    capture = cv2.VideoCapture("http://192.168.1.68:4747/video")
+
+    middle_square_d = None
+
     while (capture.isOpened()):
         ret, frame = capture.read()
         #frame =  cv2.fastNlMeansDenoisingColored(frame,None,10,10,7,21)
@@ -299,7 +301,7 @@ if __name__ == "__main__":
         if k == 'h':
             cv2.waitKey()
 
-        print("\n\nNEW FRAME\n\n")
+        #print("\n\nNEW FRAME\n\n")
         original_frame = frame.copy()
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         canny = apply_canny_detection(frame)
@@ -317,15 +319,16 @@ if __name__ == "__main__":
         if middle_square != []:
             middle_square_d = middle_square
 
+        if not middle_square_d:
+            continue
 
         color_name = detect_face_color(middle_square_d,hsv_frame)
 
-        cv2.putText(frame, color_name, (10,500) , cv2.FONT_HERSHEY_PLAIN, 1, (255,255,255), cv2.LINE_AA)
+        cv2.putText(frame, color_name, (10,500) , cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2, cv2.LINE_AA)
         subsquares = detect_closest_nine_squares(contours, middle_square_d, gray_frame)
 
         cv2.drawContours(frame, middle_square_d, -1, (129,10,255), thickness=3)
         cv2.imshow("video",frame)
-
             
         for idx ,approx in enumerate(subsquares):
             #cv2.drawContours(frame, approx, -1, (255,0,0), thickness= 2)
