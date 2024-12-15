@@ -5,13 +5,14 @@ import sys
 
 def apply_canny_detection(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.bilateralFilter(gray, 9, 45,75)
+    blurred = cv2.bilateralFilter(gray, 9, 15,35)
     cv2.imshow("Blurred", blurred)
-    dst = cv2.Canny(blurred, 20,30 , None)
+    dst = cv2.Canny(blurred, 10,30 , None)
+    cv2.imshow("Canny", dst)
     return dst
 
 def dilate_contours(image):
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5,5))
+    kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (11,11))
     dilated = cv2.dilate(image, kernel, iterations=2)
     eroded = cv2.erode(dilated, kernel, iterations=1)
     return eroded
@@ -28,8 +29,7 @@ def calculate_distance (p1,p2):
 
 def detect_closest_nine_squares(contours,reference_square, gray_frame):
     # square contour order top right  ->  bottom right -> bottom left -> top left
-    x_r,y_r,width,height = cv2.boundingRect(reference_square[0])
-    reference_pos = (x_r + (width // 2), y_r + (height // 2))
+    reference_pos = reference_square
 
     contour_distance = []
     for c in contours:
@@ -40,6 +40,22 @@ def detect_closest_nine_squares(contours,reference_square, gray_frame):
     sorted_contours = sorted(contour_distance, key=lambda x: x[1])
     return  [ c[0] for c in sorted_contours[:9]]
 
+def remove_larger_nested_squares(contours):
+    filtered_contours = []
+    for i, c1 in enumerate(contours):
+        x1, y1, w1, h1 = cv2.boundingRect(c1)
+        is_larger = False
+        for j, c2 in enumerate(contours):
+            if i != j:
+                x2, y2, w2, h2 = cv2.boundingRect(c2)
+                # Check if c2 (smaller) is inside c1 (larger)
+                if x2 >= x1 and y2 >= y1 and x2 + w2 <= x1 + w1 and y2 + h2 <= y1 + h1:
+                    if cv2.contourArea(c1) > cv2.contourArea(c2):  # Compare areas
+                        is_larger = True
+                        break
+        if not is_larger:
+            filtered_contours.append(c1)
+    return filtered_contours
 
 def find_last_child_contours(contours, hierarchy):
 
@@ -73,25 +89,19 @@ def reduce_contour_complexity(image,frame):
     image_ct = frame.copy()
 
     #last_child_contours = contours
-    last_child_contours = find_last_child_contours(contours, hierarchy)
+    #last_child_contours = find_last_child_contours(contours, hierarchy)
+    last_child_contours = remove_larger_nested_squares(contours)
 
     for c in last_child_contours:
 
         area = cv2.contourArea(c)
-        if area < 1000:
-            continue
-        
-
-        cv2.drawContours(image_ct, c, -1, (0,255,0), thickness= 2)
-        # approximate the contour
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.1 * peri, True)
-        #print(f"Before {c.shape=:} then {approx.shape=:}")
-
+        #print(f"contours before {len (c)} after {len(approx)}")
         if is_a_valid_contour(approx):
             approx_contours.append(approx)
     
-    return tuple(approx_contours)
+    return last_child_contours,approx_contours
 
 def detect_contout_main_color(contours, frame_hsv):
     green_lower=np.array([54,63,79])
@@ -249,25 +259,34 @@ def detect_face_color(middle_square, hsv_frame):
     
     reference_pos_x, reference_pos_y = (x_r + (width // 2), y_r + (height // 2))
     hsv_px = hsv_frame[reference_pos_y,reference_pos_x]
-    if 0<= hsv_px[1] <  25 :
+    if 0 <= hsv_px[1] <  35 :
         return "White"
 
     if 0< hsv_px[0] < 7 or 170 < hsv_px[0] <= 179:
         return "RED"
 
-    if 7 < hsv_px[0] < 25:
+    if 7 < hsv_px[0] < 20:
         return "Orange"
 
-    if 25< hsv_px[0] < 45:
+    if 20< hsv_px[0] < 55:
         return "Yellow"
 
-    if 45 < hsv_px[0] < 85:
+    if 55 < hsv_px[0] < 85:
         return "Green"
 
     if 85< hsv_px[0] < 115:
         return "Blue"
+    return " "
 
+def get_face_string(square, hsv_frame):
+    for i in sorted_contours:
+        print(detect_face_color(i, hsv_frame)[0], end="")
 
+def get_center(contour):
+    M = cv2.moments(contour)
+    cx = int(M["m10"] / M["m00"])
+    cy = int(M["m01"] / M["m00"])
+    return(cx,cy)
 
 if __name__ == "__main__":
     #cv2.namedWindow("Canny Lines", cv2.WINDOW_FREERATIO)
@@ -279,11 +298,11 @@ if __name__ == "__main__":
 
     cv2.namedWindow("video", cv2.WINDOW_FREERATIO)
 
-    capture = cv2.VideoCapture("./20241128_111931.mp4")
+    #capture = cv2.VideoCapture("./20241128_111931.mp4")
     #capture = cv2.VideoCapture("./20241123_182441.mp4")
     #capture = cv2.VideoCapture(0)
     #capture = cv2.VideoCapture("http://192.168.241.75:4747/video")
-    #capture = cv2.VideoCapture("http://192.168.1.68:4747/video")
+    capture = cv2.VideoCapture("http://192.168.1.68:4747/video")
 
     middle_square_d = None
 
@@ -304,17 +323,27 @@ if __name__ == "__main__":
         #print("\n\nNEW FRAME\n\n")
         original_frame = frame.copy()
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        height, width = frame.shape[:2]
+        image_center = (height // 2, width // 2 )
+
         canny = apply_canny_detection(frame)
         dilated_canny = dilate_contours(canny)
+        lines = cv2.HoughLinesP(dilated_canny, rho=1, theta=np.pi/180, threshold=100, minLineLength=50, maxLineGap=10)
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        cv2.imshow( "Image contours",frame)
 
         #cv2.imshow( "Canny Lines",canny)
-        cv2.imshow( "Dilated Canny Lines",dilated_canny)
-        contours = reduce_contour_complexity(dilated_canny, frame)
+        #cv2.imshow( "Dilated Canny Lines",dilated_canny)
+        contours, approx_contours = reduce_contour_complexity(dilated_canny, frame)
 
-        #frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        #detect_contout_main_color(contours, frame_hsv)
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        
+        """
+        subsquares = detect_closest_nine_squares(contours, image_center, gray_frame)
+
         middle_square = detect_middle_square(contours)
         if middle_square != []:
             middle_square_d = middle_square
@@ -325,13 +354,19 @@ if __name__ == "__main__":
         color_name = detect_face_color(middle_square_d,hsv_frame)
 
         cv2.putText(frame, color_name, (10,500) , cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2, cv2.LINE_AA)
-        subsquares = detect_closest_nine_squares(contours, middle_square_d, gray_frame)
+
+        sorted_contours = sorted(subsquares, key= lambda x: get_center(x)[::-1],reverse=True)
 
         cv2.drawContours(frame, middle_square_d, -1, (129,10,255), thickness=3)
         cv2.imshow("video",frame)
+        face_string = get_face_string(sorted_contours, hsv_frame)
+        print(face_string)
+        """
             
-        for idx ,approx in enumerate(subsquares):
+
+        for idx ,approx in enumerate(contours):
             #cv2.drawContours(frame, approx, -1, (255,0,0), thickness= 2)
+            """
             area = cv2.contourArea(approx)
             rect = cv2.boundingRect(approx)
             x, y, w, h = rect
@@ -339,10 +374,14 @@ if __name__ == "__main__":
             for point in approx:
                 approx_x,approx_y = point[0]
                 cv2.circle(frame, (approx_x,approx_y), 2, (255,255,255), thickness=2)
-
+            """
+            cv2.drawContours(frame, approx, -1, (255,0,0), 2)
             #cv2.putText(frame, f"{area}", (int(x+(w/2)), int(y+(h/2))), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255))
-            cv2.putText(frame, f"{idx}", (int(x+(w/2)), int(y+(h/2) - 12)), cv2.FONT_HERSHEY_PLAIN, 2, (255,255,255))
+            #cv2.putText(frame, f"{idx}", (int(x+(w/2)), int(y+(h/2) - 12)), cv2.FONT_HERSHEY_PLAIN,fontScale=1, lineType=cv2.LINE_AA, thickness=1, color=(255,255,255))
             cv2.imshow( "Image contours",frame)
             #cv2.imshow("HSV", cv2.cvtColor(frame, cv2.COLOR_BGR2HSV))
 
 
+        for idx ,approx in enumerate(approx_contours):
+            cv2.drawContours(frame, [approx], -1, (0,255,0), 2)
+            cv2.imshow( "Image contours",frame)

@@ -120,9 +120,9 @@ if __name__ == "__main__":
 
     cv2.namedWindow("video", cv2.WINDOW_FREERATIO)
 
-    #capture = cv2.VideoCapture("./20241128_111931.mp4")
+    capture = cv2.VideoCapture("./20241128_111931.mp4")
     #capture = cv2.VideoCapture("./20241123_182441.mp4")
-    capture = cv2.VideoCapture(0)
+    #capture = cv2.VideoCapture(0)
     #capture = cv2.VideoCapture("http://192.168.241.75:4747/video")
     while (capture.isOpened()):
         ret, frame = capture.read()
