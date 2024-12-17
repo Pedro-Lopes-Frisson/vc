@@ -64,7 +64,7 @@ def find_last_child_contours(contours, hierarchy):
     for idx, h in enumerate(hierarchy[0]):
         first_child = h[2]  # Index of the first child
         area = cv2.contourArea(contours[first_child])
-        if area < 1000:
+        if area < 800:
             last_child_contours.append(contours[idx])
             continue
 
@@ -298,11 +298,11 @@ if __name__ == "__main__":
 
     cv2.namedWindow("video", cv2.WINDOW_FREERATIO)
 
-    #capture = cv2.VideoCapture("./20241128_111931.mp4")
+    capture = cv2.VideoCapture("./20241128_111931.mp4")
     #capture = cv2.VideoCapture("./20241123_182441.mp4")
     #capture = cv2.VideoCapture(0)
     #capture = cv2.VideoCapture("http://192.168.241.75:4747/video")
-    capture = cv2.VideoCapture("http://192.168.1.68:4747/video")
+    #capture = cv2.VideoCapture("http://192.168.1.68:4747/video")
 
     middle_square_d = None
 
